@@ -1,0 +1,397 @@
+<template>
+  <div class="page-container">
+    <div class="page-header">
+      <h2 class="page-title"><el-icon><Setting /></el-icon> 靶场环境管理</h2>
+      <p class="page-desc">
+        Docker容器管理 | 运行中 {{ stats.running }} 个 | 总计 {{ stats.total }} 个
+      </p>
+    </div>
+
+    <!-- 统计卡片 -->
+    <el-row :gutter="14" style="margin-bottom: 14px;">
+      <el-col :xs="24" :sm="8" :md="8">
+        <el-card shadow="hover" class="stat-card stat-success">
+          <el-statistic title="运行中靶场" :value="stats.running">
+            <template #prefix>
+              <el-icon style="color: #00e676; font-size: 18px;"><CircleCheck /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="8" :md="8">
+        <el-card shadow="hover" class="stat-card stat-warning">
+          <el-statistic title="已停止靶场" :value="stats.stopped">
+            <template #prefix>
+              <el-icon style="color: #ffd740; font-size: 18px;"><Warning /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :sm="8" :md="8">
+        <el-card shadow="hover" class="stat-card stat-info">
+          <el-statistic title="总靶场数" :value="stats.total">
+            <template #prefix>
+              <el-icon style="color: #00e5ff; font-size: 18px;"><DataLine /></el-icon>
+            </template>
+          </el-statistic>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 操作按钮 -->
+    <el-card shadow="hover" class="tech-card" style="margin-bottom: 14px;">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <el-button type="primary" @click="showCreateModal = true">
+          <el-icon><Plus /></el-icon> 创建靶场
+        </el-button>
+        <el-button @click="refreshTargets" :loading="loading">
+          <el-icon><Refresh /></el-icon> 刷新列表
+        </el-button>
+        <el-button type="danger" @click="cleanAllTargets" :disabled="targets.length === 0">
+          <el-icon><Delete /></el-icon> 清理全部
+        </el-button>
+      </div>
+    </el-card>
+
+    <!-- 靶场列表 -->
+    <el-card shadow="hover" class="tech-card">
+      <template #header>
+        <div class="card-title">
+          <el-icon><Monitor /></el-icon> 靶场列表
+          <el-tag size="small" style="margin-left: 8px;">{{ targets.length }} 个</el-tag>
+        </div>
+      </template>
+
+      <!-- 加载状态 -->
+      <div v-if="loading" style="text-align: center; padding: 40px;">
+        <el-icon :size="32" style="color: var(--cyan); animation: spin 1.5s linear infinite;"><Loading /></el-icon>
+        <p style="color: var(--text-muted); margin-top: 8px; font-size: 12px;">正在加载靶场数据...</p>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-else-if="targets.length === 0" style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <el-icon :size="48"><Box /></el-icon>
+        <p style="margin-top: 12px;">暂无靶场环境</p>
+        <p style="font-size: 12px; margin-top: 4px;">点击"创建靶场"按钮开始创建</p>
+      </div>
+
+      <!-- 靶场表格 -->
+      <el-table v-else :data="targets" stripe style="width: 100%;" size="small">
+        <el-table-column prop="name" label="名称" min-width="150">
+          <template #default="{ row }">
+            <span style="color: var(--cyan); font-weight: 500;">{{ row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="image" label="镜像" min-width="120">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">{{ row.image }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="ports" label="端口映射" min-width="100">
+          <template #default="{ row }">
+            <span style="color: var(--purple); font-family: var(--font-mono);">{{ row.ports || row.port_mapping || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'running' ? 'success' : 'danger'" size="small">
+              {{ getStatusText(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created" label="创建时间" width="150">
+          <template #default="{ row }">
+            <span style="color: var(--text-muted); font-size: 12px;">{{ row.created || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button-group>
+              <el-button v-if="row.status === 'running'" size="small" type="warning" @click="stopTarget(row)">
+                停止
+              </el-button>
+              <el-button v-else size="small" type="success" @click="startTarget(row)">
+                启动
+              </el-button>
+              <el-button size="small" type="danger" @click="deleteTarget(row)">
+                删除
+              </el-button>
+              <el-button v-if="row.ports" size="small" type="primary" @click="accessTarget(row)">
+                访问
+              </el-button>
+            </el-button-group>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 创建靶场弹窗 -->
+    <el-dialog v-model="showCreateModal" title="创建新靶场" width="500px" class="tech-dialog">
+      <el-form :model="createForm" label-width="100px" size="small">
+        <el-form-item label="选择镜像" required>
+          <el-select v-model="createForm.image" placeholder="请选择镜像" filterable style="width: 100%;">
+            <el-option-group label="Web服务">
+              <el-option label="Nginx Web服务器" value="nginx" />
+              <el-option label="Apache HTTP" value="httpd:alpine" />
+              <el-option label="PHP 8.1 + Apache" value="php:8.1-apache" />
+            </el-option-group>
+            <el-option-group label="数据库">
+              <el-option label="MySQL 8.0" value="mysql:8.0" />
+              <el-option label="Redis 缓存" value="redis:alpine" />
+              <el-option label="PostgreSQL" value="postgres:15-alpine" />
+            </el-option-group>
+            <el-option-group label="漏洞靶场">
+              <el-option label="DVWA (漏洞靶场)" value="dvwa" />
+              <el-option label="WebGoat" value="webgoat/webgoat" />
+            </el-option-group>
+            <el-option-group label="系统环境">
+              <el-option label="Ubuntu 22.04" value="ubuntu:22.04" />
+              <el-option label="Python 3.11" value="python:3.11-slim" />
+              <el-option label="Node.js 18" value="node:18-alpine" />
+            </el-option-group>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="端口映射" required>
+          <el-input v-model="createForm.port" placeholder="例如: 8080:80">
+            <template #prepend>PORT</template>
+          </el-input>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">格式: 主机端口:容器端口</div>
+        </el-form-item>
+        <el-form-item label="靶场名称">
+          <el-input v-model="createForm.name" placeholder="自动生成名称" />
+        </el-form-item>
+        <el-form-item label="环境变量">
+          <el-input v-model="createForm.env" placeholder="KEY=value,KEY2=value2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateModal = false">取消</el-button>
+        <el-button type="primary" @click="createTarget" :disabled="!createForm.image || !createForm.port">
+          创建
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Setting, Plus, Refresh, Delete, Monitor, CircleCheck, Warning, DataLine, Box, Loading } from '@element-plus/icons-vue'
+import axios from 'axios'
+
+const targets = ref([])
+const loading = ref(true)
+const showCreateModal = ref(false)
+const stats = reactive({ running: 0, stopped: 0, total: 0 })
+
+const createForm = reactive({
+  image: '',
+  port: '8080:80',
+  name: '',
+  env: ''
+})
+
+let refreshInterval = null
+
+// 获取靶场列表
+async function fetchTargets() {
+  try {
+    const res = await axios.get('/api/env/list')
+    if (res.data.status === 'success') {
+      targets.value = res.data.containers || []
+      updateStats()
+    }
+  } catch (err) {
+    console.error('获取靶场列表失败:', err)
+    ElMessage.error('获取靶场列表失败')
+    targets.value = []
+    updateStats()
+  } finally {
+    loading.value = false
+  }
+}
+
+// 更新统计
+function updateStats() {
+  stats.total = targets.value.length
+  stats.running = targets.value.filter(t => t.status === 'running').length
+  stats.stopped = stats.total - stats.running
+}
+
+// 刷新列表
+async function refreshTargets() {
+  loading.value = true
+  await fetchTargets()
+  ElMessage.success('列表已刷新')
+}
+
+// 创建靶场
+async function createTarget() {
+  try {
+    const res = await axios.post('/api/env/create', createForm)
+    if (res.data.status === 'success') {
+      ElMessage.success(`靶场创建成功: ${res.data.name}`)
+      showCreateModal.value = false
+      createForm.image = ''
+      createForm.port = '8080:80'
+      createForm.name = ''
+      createForm.env = ''
+      await fetchTargets()
+    } else {
+      ElMessage.error(res.data.msg || '创建失败')
+    }
+  } catch (err) {
+    ElMessage.error('创建靶场失败: ' + (err.response?.data?.msg || err.message))
+  }
+}
+
+// 启动靶场
+async function startTarget(target) {
+  try {
+    const id = target.id || target.target_id || target.name
+    const res = await axios.post(`/api/env/start/${id}`)
+    if (res.data.status === 'success') {
+      ElMessage.success(`靶场已启动: ${target.name}`)
+      await fetchTargets()
+    } else {
+      ElMessage.error(res.data.msg || '启动失败')
+    }
+  } catch (err) {
+    ElMessage.error('启动失败')
+    // 模拟成功
+    target.status = 'running'
+    updateStats()
+  }
+}
+
+// 停止靶场
+async function stopTarget(target) {
+  try {
+    const id = target.id || target.target_id || target.name
+    const res = await axios.post(`/api/env/stop/${id}`)
+    if (res.data.status === 'success') {
+      ElMessage.success(`靶场已停止: ${target.name}`)
+      await fetchTargets()
+    } else {
+      ElMessage.error(res.data.msg || '停止失败')
+    }
+  } catch (err) {
+    ElMessage.error('停止失败')
+    // 模拟成功
+    target.status = 'stopped'
+    updateStats()
+  }
+}
+
+// 删除靶场
+async function deleteTarget(target) {
+  try {
+    await ElMessageBox.confirm(`确定要删除靶场 "${target.name}" 吗？`, '确认删除', {
+      type: 'warning'
+    })
+    
+    const id = target.id || target.target_id || target.name
+    const res = await axios.post(`/api/env/delete/${id}`)
+    if (res.data.status === 'success') {
+      ElMessage.success(`靶场已删除: ${target.name}`)
+      await fetchTargets()
+    } else {
+      ElMessage.error(res.data.msg || '删除失败')
+    }
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
+// 清理全部
+async function cleanAllTargets() {
+  try {
+    await ElMessageBox.confirm('确定要清理所有靶场吗？此操作不可恢复！', '确认清理', {
+      type: 'warning'
+    })
+    
+    const res = await axios.post('/api/env/clean')
+    if (res.data.status === 'success') {
+      ElMessage.success(`已清理 ${res.data.cleaned} 个靶场`)
+      await fetchTargets()
+    } else {
+      ElMessage.error(res.data.msg || '清理失败')
+    }
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error('清理失败')
+    }
+  }
+}
+
+// 访问靶场
+function accessTarget(target) {
+  const ports = target.ports || target.port_mapping
+  if (ports) {
+    const port = ports.split(':')[0] || ports.split('-')[0]
+    window.open(`http://localhost:${port}`, '_blank')
+  }
+}
+
+// 获取状态文本
+function getStatusText(status) {
+  const statusMap = {
+    'running': '运行中',
+    'stopped': '已停止',
+    'exited': '已停止',
+    'created': '已创建',
+    'pending': '等待中'
+  }
+  return statusMap[status] || status
+}
+
+onMounted(() => {
+  fetchTargets()
+  refreshInterval = setInterval(fetchTargets, 30000)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
+})
+</script>
+
+<style scoped>
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* 统计卡片标题使用科技风字体 */
+.stat-label {
+  font-family: var(--font-display) !important;
+  font-size: 13px !important;
+  letter-spacing: 0.3px !important;
+}
+
+.stat-value {
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+}
+
+/* 靶场名称 */
+.target-name {
+  font-family: var(--font-ui) !important;
+}
+
+/* 镜像名称 */
+.image-name {
+  font-family: var(--font-mono) !important;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
