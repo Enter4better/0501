@@ -135,6 +135,9 @@
                   <el-button size="small" type="success" @click="testRule(row)" title="测试">
                     <el-icon><Aim /></el-icon>
                   </el-button>
+                  <el-button size="small" type="warning" @click="aiRecommendDefense(row)" title="AI推荐">
+                    <el-icon><MagicStick /></el-icon>
+                  </el-button>
                 </el-button-group>
               </template>
             </el-table-column>
@@ -559,6 +562,66 @@ async function testRule(row) {
   testForm.value.defense_id = row.defense_id
   testResult.value = null
   ElMessage.info(`已选择规则: ${row.name}`)
+}
+
+// AI智能防御推荐
+async function aiRecommendDefense(row) {
+  try {
+    const res = await axios.post('/api/ai/recommend-defense', {
+      rule_name: row.name,
+      rule_type: row.defense_type,
+      description: row.description,
+      current_coverage: row.coverage
+    })
+    
+    if (res.data.status === 'success') {
+      const recommendation = res.data.recommendation
+      
+      // 显示AI推荐信息
+      ElMessage.success(`AI推荐优化: ${recommendation.suggestion}`)
+      
+      // 如果有具体的改进建议，可以更新规则
+      if (recommendation.improvements) {
+        // 创建一个临时对话框显示详细建议
+        ElMessageBox({
+          title: 'AI防御优化建议',
+          message: `
+            <div class="ai-recommendation">
+              <h4>针对规则: ${row.name}</h4>
+              <p><strong>当前类型:</strong> ${row.defense_type}</p>
+              <p><strong>AI分析:</strong> ${recommendation.analysis || '基于当前威胁模型分析'}</p>
+              <p><strong>优化建议:</strong> ${recommendation.suggestion}</p>
+              <p><strong>预期效果:</strong> ${recommendation.expected_improvement || '提升防御覆盖率和准确性'}</p>
+            </div>
+          `,
+          dangerouslyUseHTMLString: true,
+          showCancelButton: true,
+          confirmButtonText: '应用建议',
+          cancelButtonText: '稍后处理'
+        }).then(async () => {
+          // 如果用户选择应用建议，可以更新规则
+          if (recommendation.updated_params) {
+            const updatedRule = {
+              ...row,
+              ...recommendation.updated_params
+            }
+            
+            // 更新规则
+            const updateRes = await axios.put(`/api/defenses/${row.defense_id || row.id}/update`, updatedRule)
+            if (updateRes.data.status === 'success') {
+              ElMessage.success('规则已根据AI建议更新')
+              await loadRules()
+            }
+          }
+        })
+      }
+    } else {
+      ElMessage.warning('AI暂时无法提供防御建议')
+    }
+  } catch (e) {
+    console.error('AI防御推荐失败:', e)
+    ElMessage.warning('AI防御推荐服务暂时不可用')
+  }
 }
 
 // 运行防御测试

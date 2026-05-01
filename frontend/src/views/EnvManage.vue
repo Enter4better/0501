@@ -199,7 +199,8 @@ async function fetchTargets() {
   try {
     const res = await axios.get('/api/env/list')
     if (res.data.status === 'success') {
-      targets.value = res.data.containers || []
+      // 兼容后端返回的 data 或 containers 字段
+      targets.value = res.data.containers || res.data.data || []
       updateStats()
     }
   } catch (err) {

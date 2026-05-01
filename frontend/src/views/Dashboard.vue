@@ -362,25 +362,29 @@ async function loadStats() {
   try {
     const res = await axios.get('/api/stats/overview')
     backendStatus.value = true
-    const data = res.data?.data || {}
-    stats.value[0].value = '85%'
-    stats.value[0].class = 'stat-active'
-    stats.value[1].value = '低'
-    stats.value[2].value = '92%'
-    stats.value[3].value = '2h 35m'
+    const data = res.data || {}
+    const statsData = data.stats || {}
     
-    activeTargets.value = data.running_environments || 3
-    activeRules.value = data.defense_rules || 12
-    todayAttacks.value = data.attack_tasks || 8
-    blockedCount.value = data.alerts || 15
+    // 使用真实数据
+    stats.value[0].value = (statsData.health || 95) + '%'
+    stats.value[0].class = 'stat-active'
+    stats.value[1].value = statsData.alerts > 5 ? '中' : '低'
+    stats.value[2].value = '0%'
+    stats.value[3].value = '运行中'
+    
+    activeTargets.value = statsData.environments || 0
+    activeRules.value = statsData.defenses || 0
+    todayAttacks.value = statsData.attacks || 0
+    blockedCount.value = statsData.alerts || 0
     cpuUsage.value = 35
     memUsage.value = 42
+    lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
   } catch { 
-    // 使用默认值
-    backendStatus.value = true
-    stats.value[0].value = '85%'
-    stats.value[2].value = '92%'
-    stats.value[3].value = '2h 35m'
+    backendStatus.value = false
+    stats.value[0].value = '--'
+    stats.value[1].value = '--'
+    stats.value[2].value = '--'
+    stats.value[3].value = '--'
   }
 }
 
@@ -388,10 +392,29 @@ async function loadTopo() {
   if (!topoRef.value) return
   topoLoading.value = true
   try {
-    const res = await axios.get('/api/topology')
-    drawTopoFromData(res.nodes, res.links)
+    const res = await axios.get('/api/topology/')
+    const data = res.data || {}
+    // 使用后端返回的真实节点和边数据
+    if (data.status === 'success' && data.nodes && data.nodes.length > 0) {
+      // 将后端数据转换为绘图格式
+      const nodes = data.nodes.map((n, i) => ({
+        id: n.id,
+        name: n.label || n.name || n.id,
+        type: n.type || 'target',
+        x: 20 + (i % 4) * 20,
+        y: 20 + Math.floor(i / 4) * 25
+      }))
+      const links = data.edges.map(e => ({
+        source: e.source,
+        target: e.target
+      }))
+      drawTopoFromData(nodes, links)
+    } else {
+      // 无数据时显示空拓扑
+      drawTopoFromData([{ id: 'server', name: '靶场服务器', type: 'server', x: 50, y: 50 }], [])
+    }
   } catch {
-    drawTopoFromData(null, null)
+    drawTopoFromData([{ id: 'server', name: '靶场服务器', type: 'server', x: 50, y: 50 }], [])
   } finally { topoLoading.value = false }
 }
 

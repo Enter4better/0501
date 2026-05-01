@@ -146,6 +146,10 @@ o<template>
                 <el-icon><Refresh /></el-icon>
                 重置配置
               </el-button>
+              <el-button type="success" @click="aiPlanAttack" :disabled="!form.target">
+                <el-icon><MagicStick /></el-icon>
+                AI智能规划攻击
+              </el-button>
             </div>
           </div>
         </el-card>
@@ -362,6 +366,53 @@ async function launch() {
     resultType.value = 'danger'
     resultStatus.value = '失败'
     ElMessage.error('攻击执行失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// AI智能规划攻击
+async function aiPlanAttack() {
+  if (!form.value.target) {
+    ElMessage.warning('请选择目标')
+    return
+  }
+
+  loading.value = true
+  result.value = ''
+  
+  try {
+    // 调用AI接口进行攻击规划
+    const aiRes = await axios.post('/api/ai/plan-attack', {
+      target: form.value.target,
+      port: form.value.port,
+      description: `对目标${form.value.target}:${form.value.port}进行安全测试，请规划合适的攻击策略`
+    })
+
+    if (aiRes.data.status === 'success') {
+      const plan = aiRes.data.plan
+      result.value = JSON.stringify(plan, null, 2)
+      resultType.value = 'success'
+      resultStatus.value = 'AI规划完成'
+      ElMessage.success('AI已生成攻击规划')
+
+      // 应用AI推荐的攻击类型
+      if (plan.recommended_attack) {
+        form.value.type = plan.recommended_attack
+      }
+      
+      // 应用AI推荐的强度
+      if (plan.recommended_intensity) {
+        form.value.intensity = plan.recommended_intensity
+      }
+    } else {
+      throw new Error(aiRes.data.msg || 'AI规划失败')
+    }
+  } catch (e) {
+    result.value = `AI规划失败: ${e.response?.data?.msg || e.message}`
+    resultType.value = 'warning'
+    resultStatus.value = 'AI规划失败'
+    ElMessage.warning('AI规划失败')
   } finally {
     loading.value = false
   }

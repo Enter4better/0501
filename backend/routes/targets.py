@@ -13,7 +13,7 @@ if str(backend_dir) not in sys.path:
 from models.target import Target
 from models.log import Log
 from services.database import db_service
-from services.async_queue import async_queue
+from services.async_queue import async_queue_service
 from config import DOCKER_CONFIG
 
 targets_bp = Blueprint('targets', __name__, url_prefix='/api/env')
@@ -49,7 +49,7 @@ def _cleanup_failed_containers():
 def list_targets():
     try:
         user_id = get_jwt_identity()
-        targets = Target.list_all(user_id)
+        targets = Target.list_all()
         
         docker_info = {}
         try:
@@ -304,7 +304,7 @@ def clean_targets():
 def get_target_stats():
     try:
         user_id = get_jwt_identity()
-        targets = Target.list_all(user_id)
+        targets = Target.list_all()
         
         stats = {
             'total': len(targets),

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { House, Aim, Umbrella, Connection, Document, Setting, Cpu } from '@element-plus/icons-vue'
+import { House, Aim, Umbrella, Connection, Document, Setting } from '@element-plus/icons-vue'
 
 const routes = [
   { path: '/', name: 'Dashboard', component: () => import('../views/Dashboard.vue') },
@@ -8,7 +8,6 @@ const routes = [
   { path: '/topology', name: 'Topology', component: () => import('../views/Topology.vue') },
   { path: '/logs', name: 'Logs', component: () => import('../views/Logs.vue') },
   { path: '/env', name: 'EnvManage', component: () => import('../views/EnvManage.vue') },
-  { path: '/ai', name: 'AiDecision', component: () => import('../views/AiDecision.vue') },
   { path: '/login', name: 'Login', component: () => import('../views/Login.vue') },
 ]
 
@@ -21,7 +20,6 @@ export const navLinks = [
   { name: '防御', path: '/defense', icon: Umbrella },
   { name: '拓扑', path: '/topology', icon: Connection },
   { name: '日志', path: '/logs', icon: Document },
-  { name: 'AI决策', path: '/ai', icon: Cpu },
 ]
 
 const router = createRouter({

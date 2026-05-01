@@ -1,189 +1,184 @@
-import hashlib
-import time
+# -*- coding: utf-8 -*-
+"""
+用户模型 - SQLite实现
+"""
+import sqlite3
 from datetime import datetime
-from typing import Optional, Dict, Any
-import pymysql
+from werkzeug.security import generate_password_hash, check_password_hash
+import logging
 import sys
 from pathlib import Path
 
-# 添加backend目录到路�?
-backend_dir = Path(__file__).parent.parent.parent
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from config import DB_CONFIG, SECURITY_CONFIG
+from services.database import db_service
+
+logger = logging.getLogger('models.user')
 
 
 class User:
-    def __init__(self, user_id: int = None, username: str = None, email: str = None, 
-                 password_hash: str = None, role: str = 'user', created_at: datetime = None,
-                 last_login: datetime = None):
+    """用户模型类"""
+    
+    def __init__(self, user_id=None, username=None, password=None, email=None, role='user', created_at=None, last_login=None):
         self.user_id = user_id
         self.username = username
+        self.password = password
         self.email = email
-        self.password_hash = password_hash
         self.role = role
-        self.created_at = created_at or datetime.now()
+        self.created_at = created_at
         self.last_login = last_login
     
-    def set_password(self, password: str):
-        """设置密码并生成哈希�?""
-        salt = "cyber_range_salt"  # 在实际应用中应该使用随机�?
-        self.password_hash = self._hash_password(password, salt)
+    @staticmethod
+    def get_by_id(user_id):
+        """根据ID获取用户"""
+        try:
+            conn = db_service.get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+                row = cursor.fetchone()
+                conn.close()
+                
+                if row:
+                    return User(
+                        user_id=row['user_id'],
+                        username=row['username'],
+                        password=row['password'],
+                        email=row['email'],
+                        role=row['role'],
+                        created_at=row['created_at'],
+                        last_login=row['last_login']
+                    )
+        except Exception as e:
+            logger.error(f"获取用户失败: {e}")
+        return None
     
-    def check_password(self, password: str) -> bool:
+    @staticmethod
+    def get_by_username(username):
+        """根据用户名获取用户"""
+        try:
+            conn = db_service.get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+                row = cursor.fetchone()
+                conn.close()
+                
+                if row:
+                    return User(
+                        user_id=row['user_id'],
+                        username=row['username'],
+                        password=row['password'],
+                        email=row['email'],
+                        role=row['role'],
+                        created_at=row['created_at'],
+                        last_login=row['last_login']
+                    )
+        except Exception as e:
+            logger.error(f"获取用户失败: {e}")
+        return None
+    
+    @staticmethod
+    def list_all():
+        """获取所有用户"""
+        try:
+            conn = db_service.get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users ORDER BY created_at DESC")
+                rows = cursor.fetchall()
+                conn.close()
+                
+                users = []
+                for row in rows:
+                    users.append(User(
+                        user_id=row['user_id'],
+                        username=row['username'],
+                        password=row['password'],
+                        email=row['email'],
+                        role=row['role'],
+                        created_at=row['created_at'],
+                        last_login=row['last_login']
+                    ))
+                return users
+        except Exception as e:
+            logger.error(f"获取用户列表失败: {e}")
+        return []
+    
+    def save(self):
+        """保存用户"""
+        try:
+            conn = db_service.get_connection()
+            if conn:
+                cursor = conn.cursor()
+                
+                if self.user_id:
+                    # 更新现有用户
+                    cursor.execute("""
+                        UPDATE users SET 
+                        username = ?, email = ?, role = ?, last_login = ?
+                        WHERE user_id = ?
+                    """, (self.username, self.email, self.role, self.last_login, self.user_id))
+                else:
+                    # 创建新用户
+                    hashed_password = generate_password_hash(self.password)
+                    cursor.execute("""
+                        INSERT INTO users (username, password, email, role)
+                        VALUES (?, ?, ?, ?)
+                    """, (self.username, hashed_password, self.email, self.role))
+                    self.user_id = cursor.lastrowid
+                
+                conn.commit()
+                conn.close()
+                return True
+        except Exception as e:
+            logger.error(f"保存用户失败: {e}")
+        return False
+    
+    def delete(self):
+        """删除用户"""
+        try:
+            conn = db_service.get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM users WHERE user_id = ?", (self.user_id,))
+                conn.commit()
+                conn.close()
+                return True
+        except Exception as e:
+            logger.error(f"删除用户失败: {e}")
+        return False
+    
+    def update_last_login(self):
+        """更新最后登录时间"""
+        try:
+            conn = db_service.get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE users SET last_login = ? WHERE user_id = ?
+                """, (datetime.now().isoformat(), self.user_id))
+                conn.commit()
+                conn.close()
+                return True
+        except Exception as e:
+            logger.error(f"更新登录时间失败: {e}")
+        return False
+    
+    def check_password(self, password):
         """验证密码"""
-        if not self.password_hash:
-            return False
-        salt = "cyber_range_salt"
-        return self._hash_password(password, salt) == self.password_hash
+        return check_password_hash(self.password, password)
     
-    def _hash_password(self, password: str, salt: str) -> str:
-        """密码哈希函数"""
-        import hashlib
-        sha256 = hashlib.sha256()
-        sha256.update((password + salt).encode('utf-8'))
-        return sha256.hexdigest()
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字�?""
+    def to_dict(self):
+        """转换为字典"""
         return {
             'user_id': self.user_id,
             'username': self.username,
             'email': self.email,
-            'password_hash': self.password_hash,
             'role': self.role,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'last_login': self.last_login.isoformat() if self.last_login else None
+            'created_at': self.created_at,
+            'last_login': self.last_login
         }
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'User':
-        """从字典创建用户对�?""
-        user = cls()
-        user.user_id = data.get('user_id')
-        user.username = data.get('username')
-        user.email = data.get('email')
-        user.password_hash = data.get('password_hash')
-        user.role = data.get('role', 'user')
-        user.created_at = datetime.fromisoformat(data['created_at']) if data.get('created_at') else None
-        user.last_login = datetime.fromisoformat(data['last_login']) if data.get('last_login') else None
-        return user
-    
-    @classmethod
-    def get_by_username(cls, username: str) -> Optional['User']:
-        """通过用户名获取用�?""
-        try:
-            connection = pymysql.connect(**DB_CONFIG)
-            with connection.cursor() as cursor:
-                sql = "SELECT * FROM users WHERE username = %s"
-                cursor.execute(sql, (username,))
-                result = cursor.fetchone()
-                if result:
-                    columns = [desc[0] for desc in cursor.description]
-                    user_data = dict(zip(columns, result))
-                    return cls.from_dict(user_data)
-        except Exception as e:
-            print(f"Error getting user by username: {e}")
-        finally:
-            if 'connection' in locals():
-                connection.close()
-        return None
-    
-    @classmethod
-    def get_by_id(cls, user_id: int) -> Optional['User']:
-        """通过ID获取用户"""
-        try:
-            connection = pymysql.connect(**DB_CONFIG)
-            with connection.cursor() as cursor:
-                sql = "SELECT * FROM users WHERE user_id = %s"
-                cursor.execute(sql, (user_id,))
-                result = cursor.fetchone()
-                if result:
-                    columns = [desc[0] for desc in cursor.description]
-                    user_data = dict(zip(columns, result))
-                    return cls.from_dict(user_data)
-        except Exception as e:
-            print(f"Error getting user by ID: {e}")
-        finally:
-            if 'connection' in locals():
-                connection.close()
-        return None
-    
-    @classmethod
-    def create(cls, username: str, password: str, email: str = None, role: str = 'user') -> Optional['User']:
-        """创建新用�?""
-        user = cls(username=username, email=email, role=role)
-        user.set_password(password)
-        
-        try:
-            connection = pymysql.connect(**DB_CONFIG)
-            with connection.cursor() as cursor:
-                sql = """
-                INSERT INTO users (username, email, password_hash, role, created_at)
-                VALUES (%s, %s, %s, %s, %s)
-                """
-                cursor.execute(sql, (
-                    user.username,
-                    user.email,
-                    user.password_hash,
-                    user.role,
-                    user.created_at
-                ))
-                connection.commit()
-                user.user_id = cursor.lastrowid
-                return user
-        except Exception as e:
-            print(f"Error creating user: {e}")
-            if 'connection' in locals():
-                connection.rollback()
-        finally:
-            if 'connection' in locals():
-                connection.close()
-        return None
-    
-    def update_last_login(self):
-        """更新最后登录时�?""
-        try:
-            connection = pymysql.connect(**DB_CONFIG)
-            with connection.cursor() as cursor:
-                sql = "UPDATE users SET last_login = %s WHERE user_id = %s"
-                cursor.execute(sql, (datetime.now(), self.user_id))
-                connection.commit()
-        except Exception as e:
-            print(f"Error updating last login: {e}")
-        finally:
-            if 'connection' in locals():
-                connection.close()
-    
-    @classmethod
-    def init_database(cls):
-        """初始化用户表"""
-        try:
-            connection = pymysql.connect(**DB_CONFIG)
-            with connection.cursor() as cursor:
-                # 创建用户�?
-                sql = """
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id INT AUTO_INCREMENT PRIMARY KEY,
-                    username VARCHAR(50) UNIQUE NOT NULL,
-                    email VARCHAR(100),
-                    password_hash VARCHAR(255) NOT NULL,
-                    role VARCHAR(20) DEFAULT 'user',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    last_login TIMESTAMP NULL
-                )
-                """
-                cursor.execute(sql)
-                connection.commit()
-                
-                # 创建管理员账户（如果不存在）
-                admin = cls.get_by_username('admin')
-                if not admin:
-                    cls.create('admin', 'admin123', 'admin@cyber-range.com', 'admin')
-                    print("Admin user created")
-        except Exception as e:
-            print(f"Error initializing database: {e}")
-        finally:
-            if 'connection' in locals():
-                connection.close()

@@ -79,7 +79,7 @@ export const statsApi = {
 
 // AI决策API
 export const aiApi = {
-  generateSummary: (data) => request.post('/ai/summary', data),
+  generateSummary: (data) => request.post('/ai/summary', data || {}),
   analyzeThreat: (data) => request.post('/ai/analyze', data),
   applyDefense: () => request.post('/ai/apply-defense'),
   blockThreats: (data) => request.post('/ai/block-threats', data),

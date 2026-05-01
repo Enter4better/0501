@@ -1,11 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+日志路由 - 日志管理API
+"""
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 
-# 添加backend目录到路�?
-backend_dir = Path(__file__).parent.parent.parent
+# 添加backend目录到路径
+backend_dir = Path(__file__).parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
@@ -14,6 +18,14 @@ from services.database import db_service
 from services.watchdog import watchdog_service
 
 logs_bp = Blueprint('logs', __name__, url_prefix='/api/logs')
+
+
+@logs_bp.route('', methods=['GET'])
+@jwt_required()
+def list_logs_root():
+    """获取日志列表（根路由）"""
+    return list_logs()
+
 
 @logs_bp.route('/list', methods=['GET'])
 @jwt_required()
@@ -29,16 +41,21 @@ def list_logs():
         offset = int(request.args.get('offset', 0))
         
         # 获取日志列表
-        logs = Log.list_all(limit=limit, offset=offset, level=level, source=source, user_id=user_id)
+        log_objects = Log.list_all(limit=limit, offset=offset, level=level, source=source, user_id=user_id)
+        
+        # 将Log对象转换为字典格式
+        logs = [log.to_dict() for log in log_objects]
         
         return jsonify({
             'status': 'success',
+            'data': logs,
             'logs': logs,
             'total': len(logs)
         }), 200
     except Exception as e:
         current_app.logger.error(f"获取日志列表失败: {e}")
         return jsonify({'status': 'error', 'msg': '获取日志列表失败'}), 500
+
 
 @logs_bp.route('/stats', methods=['GET'])
 @jwt_required()
@@ -76,6 +93,7 @@ def get_log_stats():
         current_app.logger.error(f"获取日志统计失败: {e}")
         return jsonify({'status': 'error', 'msg': '获取日志统计失败'}), 500
 
+
 @logs_bp.route('/attack', methods=['GET'])
 @jwt_required()
 def get_attack_logs():
@@ -94,6 +112,7 @@ def get_attack_logs():
     except Exception as e:
         current_app.logger.error(f"获取攻击日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '获取攻击日志失败'}), 500
+
 
 @logs_bp.route('/defense', methods=['GET'])
 @jwt_required()
@@ -114,6 +133,7 @@ def get_defense_logs():
         current_app.logger.error(f"获取防御日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '获取防御日志失败'}), 500
 
+
 @logs_bp.route('/system', methods=['GET'])
 @jwt_required()
 def get_system_logs():
@@ -133,6 +153,7 @@ def get_system_logs():
         current_app.logger.error(f"获取系统日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '获取系统日志失败'}), 500
 
+
 @logs_bp.route('/docker', methods=['GET'])
 @jwt_required()
 def get_docker_logs():
@@ -151,6 +172,7 @@ def get_docker_logs():
     except Exception as e:
         current_app.logger.error(f"获取Docker日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '获取Docker日志失败'}), 500
+
 
 @logs_bp.route('/search', methods=['GET'])
 @jwt_required()
@@ -172,40 +194,43 @@ def search_logs():
         params = []
         
         if keyword:
-            conditions.append("message LIKE %s")
+            conditions.append("message LIKE ?")
             params.append(f"%{keyword}%")
         
         if level:
-            conditions.append("level = %s")
+            conditions.append("level = ?")
             params.append(level)
         
         if source:
-            conditions.append("source = %s")
+            conditions.append("source = ?")
             params.append(source)
         
         if start_date:
-            conditions.append("created_at >= %s")
+            conditions.append("created_at >= ?")
             params.append(start_date)
         
         if end_date:
-            conditions.append("created_at <= %s")
+            conditions.append("created_at <= ?")
             params.append(end_date)
         
         # 构建SQL查询
         sql = "SELECT * FROM logs WHERE 1=1"
         if conditions:
             sql += " AND " + " AND ".join(conditions)
-        sql += " ORDER BY created_at DESC LIMIT %s"
+        sql += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
         
         # 执行查询
         connection = db_service.get_connection()
-        with connection.cursor() as cursor:
-            cursor.execute(sql, params)
-            results = cursor.fetchall()
-            
-            columns = [desc[0] for desc in cursor.description]
-            logs = [dict(zip(columns, row)) for row in results]
+        cursor = connection.cursor()
+        cursor.execute(sql, params)
+        results = cursor.fetchall()
+        
+        # 获取列名
+        columns = [description[0] for description in cursor.description]
+        logs = [dict(zip(columns, row)) for row in results]
+        
+        connection.close()
         
         return jsonify({
             'status': 'success',
@@ -216,6 +241,7 @@ def search_logs():
     except Exception as e:
         current_app.logger.error(f"搜索日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '搜索日志失败'}), 500
+
 
 @logs_bp.route('/export', methods=['GET'])
 @jwt_required()
@@ -236,19 +262,19 @@ def export_logs():
         params = []
         
         if level:
-            conditions.append("level = %s")
+            conditions.append("level = ?")
             params.append(level)
         
         if source:
-            conditions.append("source = %s")
+            conditions.append("source = ?")
             params.append(source)
         
         if start_date:
-            conditions.append("created_at >= %s")
+            conditions.append("created_at >= ?")
             params.append(start_date)
         
         if end_date:
-            conditions.append("created_at <= %s")
+            conditions.append("created_at <= ?")
             params.append(end_date)
         
         # 构建SQL查询
@@ -259,12 +285,15 @@ def export_logs():
         
         # 执行查询
         connection = db_service.get_connection()
-        with connection.cursor() as cursor:
-            cursor.execute(sql, params)
-            results = cursor.fetchall()
-            
-            columns = [desc[0] for desc in cursor.description]
-            logs = [dict(zip(columns, row)) for row in results]
+        cursor = connection.cursor()
+        cursor.execute(sql, params)
+        results = cursor.fetchall()
+        
+        # 获取列名
+        columns = [description[0] for description in cursor.description]
+        logs = [dict(zip(columns, row)) for row in results]
+        
+        connection.close()
         
         # 根据格式导出
         if format_type == 'csv':
@@ -290,6 +319,7 @@ def export_logs():
         current_app.logger.error(f"导出日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '导出日志失败'}), 500
 
+
 @logs_bp.route('/clear', methods=['POST'])
 @jwt_required()
 def clear_logs():
@@ -306,9 +336,9 @@ def clear_logs():
         
         # 记录日志
         if older_than_days:
-            message = f'清理�?{count} �?{older_than_days} 天前的日�?
+            message = f'清理了 {count} 条 {older_than_days} 天前的日志'
         else:
-            message = f'清理了所有日志，�?{count} �?
+            message = f'清理了所有日志，共 {count} 条'
         
         current_app.logger.info(message)
         
@@ -321,19 +351,27 @@ def clear_logs():
         current_app.logger.error(f"清理日志失败: {e}")
         return jsonify({'status': 'error', 'msg': '清理日志失败'}), 500
 
+
 @logs_bp.route('/watchdog/status', methods=['GET'])
 @jwt_required()
 def get_watchdog_status():
-    """获取监控服务状�?""
+    """获取监控服务状态"""
     try:
-        status = watchdog_service.get_stats()
+        monitors = watchdog_service.get_all_monitors()
+        alerts = watchdog_service.get_alerts()
+        
         return jsonify({
             'status': 'success',
-            'watchdog': status
+            'watchdog': {
+                'running': watchdog_service.running,
+                'monitors': monitors,
+                'alerts': alerts
+            }
         }), 200
     except Exception as e:
-        current_app.logger.error(f"获取监控服务状态失�? {e}")
-        return jsonify({'status': 'error', 'msg': '获取监控服务状态失�?}), 500
+        current_app.logger.error(f"获取监控服务状态失败: {e}")
+        return jsonify({'status': 'error', 'msg': '获取监控服务状态失败'}), 500
+
 
 @logs_bp.route('/watchdog/start', methods=['POST'])
 @jwt_required()
@@ -343,11 +381,12 @@ def start_watchdog():
         watchdog_service.start()
         return jsonify({
             'status': 'success',
-            'message': '监控服务已启�?
+            'message': '监控服务已启动'
         }), 200
     except Exception as e:
         current_app.logger.error(f"启动监控服务失败: {e}")
         return jsonify({'status': 'error', 'msg': '启动监控服务失败'}), 500
+
 
 @logs_bp.route('/watchdog/stop', methods=['POST'])
 @jwt_required()
@@ -357,21 +396,22 @@ def stop_watchdog():
         watchdog_service.stop()
         return jsonify({
             'status': 'success',
-            'message': '监控服务已停�?
+            'message': '监控服务已停止'
         }), 200
     except Exception as e:
         current_app.logger.error(f"停止监控服务失败: {e}")
         return jsonify({'status': 'error', 'msg': '停止监控服务失败'}), 500
+
 
 @logs_bp.route('/watchdog/clear', methods=['POST'])
 @jwt_required()
 def clear_watchdog_stats():
     """清空监控统计"""
     try:
-        watchdog_service.clear_stats()
+        watchdog_service.clear_alerts()
         return jsonify({
             'status': 'success',
-            'message': '监控统计已清�?
+            'message': '监控告警已清空'
         }), 200
     except Exception as e:
         current_app.logger.error(f"清空监控统计失败: {e}")

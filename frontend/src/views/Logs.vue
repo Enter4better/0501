@@ -170,7 +170,7 @@
           </div>
         </el-card>
 
-        <!-- 快速操作 -->
+         <!-- 快速操作 -->
         <el-card shadow="hover" class="tech-card" style="margin-bottom: 16px;">
           <template #header>
             <div class="card-header">
@@ -189,6 +189,10 @@
             <el-button size="small" @click="showSearchDialog = true">
               <el-icon><Search /></el-icon>
               高级搜索
+            </el-button>
+            <el-button type="success" size="small" @click="aiAnalyzeLogs" :loading="analyzing">
+              <el-icon><ChatLineRound /></el-icon>
+              AI智能分析
             </el-button>
           </div>
         </el-card>
@@ -304,7 +308,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Document, Refresh, Delete, Warning, CircleCheck, Timer, DataLine,
-  Search, Download, Operation, Monitor, PieChart, Loading
+  Search, Download, Operation, Monitor, PieChart, Loading, ChatLineRound
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 import StatCard from '@/components/StatCard.vue'
@@ -313,6 +317,7 @@ import StatCard from '@/components/StatCard.vue'
 const loading = ref(false)
 const searching = ref(false)
 const watchdogLoading = ref(false)
+const analyzing = ref(false)
 const logs = ref([])
 const logFilter = ref('all')
 const levelFilter = ref('')
@@ -645,6 +650,88 @@ async function clearWatchdogStats() {
 // 分页变化
 function handlePageChange() {
   loadLogs()
+}
+
+// AI智能分析日志
+async function aiAnalyzeLogs() {
+  if (logs.value.length === 0) {
+    ElMessage.warning('暂无日志数据可供分析')
+    return
+  }
+  
+  // 提取最近的日志用于分析
+  const recentLogs = logs.value.slice(0, 50).map(log => ({
+    time: log.time,
+    level: log.level,
+    source: log.source,
+    msg: log.msg
+  }))
+  
+  try {
+    const res = await axios.post('/api/ai/analyze-logs', {
+      logs: recentLogs,
+      summary_count: 10
+    })
+    
+    if (res.data.status === 'success') {
+      const analysis = res.data.analysis
+      
+      // 显示AI分析结果
+      ElMessageBox({
+        title: 'AI日志分析报告',
+        message: `
+          <div class="ai-analysis-report">
+            <h4 style="margin: 0 0 12px 0; color: #409eff;">AI日志分析结果</h4>
+            
+            <div style="margin-bottom: 16px;">
+              <h5 style="margin: 8px 0; color: #67c23a;">安全态势</h5>
+              <p style="margin: 4px 0; line-height: 1.5;">${analysis.threat_level || '系统整体安全态势良好'}</p>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <h5 style="margin: 8px 0; color: #e6a23c;">主要发现</h5>
+              <ul style="margin: 4px 0; padding-left: 20px; line-height: 1.5;">
+                ${(analysis.key_findings || []).map(f => `<li>${f}</li>`).join('')}
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <h5 style="margin: 8px 0; color: #f56c6c;">风险提示</h5>
+              <ul style="margin: 4px 0; padding-left: 20px; line-height: 1.5;">
+                ${(analysis.risks || []).map(r => `<li>${r}</li>`).join('')}
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <h5 style="margin: 8px 0; color: #909399;">优化建议</h5>
+              <ul style="margin: 4px 0; padding-left: 20px; line-height: 1.5;">
+                ${(analysis.recommendations || []).map(r => `<li>${r}</li>`).join('')}
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <h5 style="margin: 8px 0; color: #409eff;">总结</h5>
+              <p style="margin: 4px 0; line-height: 1.5;">${analysis.summary || '暂无总结'}</p>
+            </div>
+          </div>
+        `,
+        dangerouslyUseHTMLString: true,
+        showCancelButton: true,
+        confirmButtonText: '查看详情',
+        cancelButtonText: '关闭',
+        customClass: 'ai-analysis-dialog'
+      }).then(() => {
+        // 如果用户点击查看详情，可以跳转到AI决策面板
+        // 这里可以添加跳转逻辑或打开更详细的分析窗口
+        ElMessage.success('正在跳转到AI决策面板...')
+      })
+    } else {
+      ElMessage.error(res.data.msg || 'AI分析失败')
+    }
+  } catch (e) {
+    console.error('AI日志分析失败:', e)
+    ElMessage.error('AI日志分析服务暂时不可用')
+  }
 }
 
 // 定时刷新

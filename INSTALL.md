@@ -1,268 +1,197 @@
-# AI攻防靶场管理系统 - 安装指南
+# 网络安全靶场系统 - 安装指南
 
-## 环境要求
+## 系统要求
+- **操作系统**: Windows 10+, macOS 10.15+, 或 Linux (Ubuntu 18.04+, CentOS 7+)
+- **Python**: 3.8 或更高版本
+- **Node.js**: 14 或更高版本
+- **Docker**: 最新稳定版本
+- **内存**: 至少 4GB RAM (推荐 8GB)
+- **磁盘空间**: 至少 10GB 可用空间
+- **Git**: 用于克隆项目仓库
 
-### 必需软件
+## 安装步骤
 
-1. **Node.js 16+** ✅ (已安装 v24.14.0)
-2. **Python 3.8+** ❌ (需要安装)
+### 1. 环境准备
 
----
+#### 安装 Python
+- 从 [Python官网](https://www.python.org/downloads/) 下载并安装 Python 3.8+
+- 确保在安装时勾选 "Add Python to PATH"
 
-## Python 安装步骤
+#### 安装 Node.js
+- 从 [Node.js官网](https://nodejs.org/) 下载并安装 LTS 版本
+- 验证安装：`node --version` 和 `npm --version`
 
-### Windows 安装 Python
+#### 安装 Docker
+- 从 [Docker官网](https://docs.docker.com/get-docker/) 下载并安装
+- 启动 Docker 服务
+- 验证安装：`docker --version`
 
-#### 方式一：官网下载（推荐）
+#### 安装 Git
+- 从 [Git官网](https://git-scm.com/downloads) 下载并安装
+- 验证安装：`git --version`
 
-1. 访问 Python 官网：https://www.python.org/downloads/
-2. 下载 Python 3.10 或 3.11 版本（推荐 3.11）
-3. 运行安装程序
-4. **重要**：勾选 "Add Python to PATH" 选项
-5. 点击 "Install Now" 完成安装
-
-#### 方式二：Microsoft Store
-
-1. 打开 Microsoft Store
-2. 搜索 "Python 3.11"
-3. 点击安装
-
-#### 方式三：使用 winget（Windows 10/11）
-
-```powershell
-winget install Python.Python.3.11
+### 2. 克隆项目
+```bash
+git clone <repository-url>
+cd cyber-range
 ```
 
-### 验证安装
+### 3. 后端配置
 
-安装完成后，**重新打开终端**，运行：
-
-```powershell
-python --version
-pip --version
-```
-
----
-
-## 项目启动步骤
-
-### 1. 安装后端依赖
-
-```powershell
-cd d:\AI-security-range\backend
+#### 安装 Python 依赖
+```bash
+cd backend
 pip install -r requirements.txt
 ```
 
-### 2. 配置环境变量
-
-```powershell
-# 复制配置文件
+#### 配置环境变量
+复制 `.env.example` 文件并重命名为 `.env`：
+```bash
+# Windows
 copy .env.example .env
-# 编辑 .env 文件，配置数据库和API密钥
+
+# Linux/macOS
+cp .env.example .env
 ```
 
-### 3. 启动后端服务
+编辑 `.env` 文件，配置以下参数：
+- `SECRET_KEY`: 用于会话加密的密钥
+- `DATABASE_URL`: 数据库连接字符串 (默认使用SQLite)
+- `DOCKER_HOST`: Docker守护进程地址 (如果使用远程Docker)
 
-```powershell
-cd d:\AI-security-range\backend
-python -m app.app
+### 4. 前端配置
+
+#### 安装 Node.js 依赖
+```bash
+cd frontend
+npm install
 ```
 
-后端服务地址：http://localhost:5000
+#### 配置前端环境
+编辑 `vite.config.js` 中的后端API代理配置：
+```javascript
+export default {
+  // ...
+  proxy: {
+    '/api': {
+      target: 'http://localhost:5000',
+      changeOrigin: true,
+    }
+  }
+}
+```
 
-### 4. 启动前端服务（已启动 ✅）
+### 5. 数据库初始化
+系统使用SQLite作为默认数据库，无需额外配置。首次运行时会自动创建数据库文件。
 
-```powershell
-cd d:\AI-security-range\frontend
+### 6. 启动系统
+
+#### 启动后端服务
+```bash
+cd backend
+python run.py
+```
+
+#### 启动前端服务
+```bash
+cd frontend
 npm run dev
 ```
 
-前端服务地址：http://localhost:3000
+### 7. 访问系统
+- 前端地址: http://localhost:3000
+- 后端API: http://localhost:5000
+- 默认账户: admin/admin123
 
----
+## 功能模块
 
-## 数据库配置
+### 攻击模拟模块
+- 支持16种标准攻击类型
+- 参数化攻击配置
+- 实时攻击状态监控
 
-系统支持两种运行模式：
-- **无数据库模式**：使用内存模拟数据，适合快速体验和演示
-- **数据库模式**：使用 MySQL 存储数据，适合生产环境和完整功能
+### 防御系统模块
+- 多层防御机制
+- 实时威胁检测
+- 防御策略配置
 
-### 方式一：无数据库模式（推荐新手）
+### 靶场管理模块
+- 靶场环境创建与管理
+- Docker容器生命周期管理
+- 资源监控与清理
 
-无需安装数据库，系统启动后会自动使用模拟数据。直接启动后端即可：
+### 日志分析模块
+- 攻击日志记录
+- 防御日志记录
+- 系统活动日志
 
-```powershell
-cd d:\AI-security-range\backend
-python -m app.app
-```
+### 网络拓扑模块
+- 网络结构可视化
+- 节点状态监控
+- 连接关系展示
 
-### 方式二：MySQL 数据库模式
+## 验证安装
 
-#### 1. 安装 MySQL
+### 1. 检查服务状态
+- 确认后端服务在 http://localhost:5000 正常运行
+- 确认前端服务在 http://localhost:3000 正常运行
+- 确认Docker服务正在运行
 
-**Windows 安装 MySQL：**
-
-##### 方式A：官网下载（推荐）
-1. 访问 MySQL 官网：https://dev.mysql.com/downloads/mysql/
-2. 选择 Windows 版本下载
-3. 运行安装程序，选择 "Developer Default" 或 "Server only"
-4. 设置 root 密码（建议设置简单密码如 `root123` 用于开发）
-5. 完成安装
-
-##### 方式B：使用 winget
-```powershell
-winget install Oracle.MySQL
-```
-
-##### 方式C：使用 Chocolatey
-```powershell
-choco install mysql -y
-```
-
-#### 2. 启动 MySQL 服务
-
-安装后确保 MySQL 服务正在运行：
-
-```powershell
-# 查看服务状态
-net start | findstr MySQL
-
-# 如果未启动，手动启动
-net start MySQL80
-# 或
-net start MySQL
-```
-
-#### 3. 创建数据库
-
-使用 MySQL 命令行或图形工具创建数据库：
-
-**命令行方式：**
-```powershell
-# 登录 MySQL（密码为安装时设置的密码）
-mysql -u root -p
-```
-
-在 MySQL 命令行中执行：
-```sql
--- 创建数据库
-CREATE DATABASE ai_security_range CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 创建专用用户（可选，推荐）
-CREATE USER 'ai_range'@'localhost' IDENTIFIED BY 'ai_range123';
-GRANT ALL PRIVILEGES ON ai_security_range.* TO 'ai_range'@'localhost';
-FLUSH PRIVILEGES;
-
--- 验证数据库创建成功
-SHOW DATABASES;
-
--- 退出
-EXIT;
-```
-
-**图形工具方式（MySQL Workbench）：**
-1. 打开 MySQL Workbench
-2. 连接到本地 MySQL 服务器
-3. 点击 "Create a new schema"
-4. 输入名称：`ai_security_range`
-5. 设置字符集：`utf8mb4`
-6. 点击 Apply
-
-#### 4. 配置项目数据库连接
-
-编辑 `backend/.env` 文件：
-
-```env
-# 数据库配置
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_DATABASE=ai_security_range
-
-# 如果创建了专用用户
-# DB_USER=ai_range
-# DB_PASSWORD=ai_range123
-```
-
-#### 5. 初始化数据库表结构
-
-启动后端服务时，系统会自动创建所需的表结构：
-
-```powershell
-cd d:\AI-security-range\backend
-python -m app.app
-```
-
-首次启动会自动创建以下表：
-- `users` - 用户账户表
-- `environments` - 攻防环境表
-- `attack_logs` - 攻击日志表
-- `defense_logs` - 防御日志表
-- `ai_decisions` - AI决策记录表
-
-#### 6. 验证数据库连接
-
-启动后端后，查看日志确认数据库连接成功：
-- 如果看到 `Database connected successfully` 表示连接成功
-- 如果看到 `Using mock data mode` 表示使用模拟数据模式
-
-### 数据库常见问题
-
-#### Q: MySQL 服务无法启动？
-A: 
-1. 检查 MySQL 安装路径是否正确
-2. 查看错误日志：`C:\ProgramData\MySQL\MySQL Server 8.0\Data\*.err`
-3. 尝试重新安装或修复
-
-#### Q: 连接数据库失败 "Access denied"？
-A: 
-1. 确认 `.env` 中的密码与 MySQL 设置的密码一致
-2. 尝试在命令行用相同密码登录验证：`mysql -u root -p`
-3. 如果密码忘记，可以重置 MySQL root 密码
-
-#### Q: 数据库表没有自动创建？
-A: 
-1. 确认数据库 `ai_security_range` 已创建
-2. 确认用户有创建表的权限
-3. 查看后端启动日志中的错误信息
-
-#### Q: 如何切换回无数据库模式？
-A: 
-在 `.env` 中注释或删除数据库配置，或设置无效的连接信息，系统会自动使用模拟数据模式。
-
----
-
-## 默认账户
-
-系统启动后会自动创建默认管理员账户：
-- 用户名：`admin`
-- 密码：`admin123`
-
----
+### 2. 测试功能
+- 尝试登录系统 (默认账户: admin/admin123)
+- 创建一个靶场环境
+- 尝试发起一次攻击
+- 查看系统日志
 
 ## 常见问题
 
-### Q: pip 命令找不到？
-A: 确保安装 Python 时勾选了 "Add Python to PATH"，或重新安装 Python。
+### Q: 后端服务启动失败？
+A: 检查Python版本是否为3.8+，确认requirements.txt中的依赖已正确安装。
 
 ### Q: 前端无法连接后端？
-A: 确保后端服务在 http://localhost:5000 运行。
+A: 检查vite.config.js中的代理配置，确认后端服务正在运行。
 
-### Q: 数据库连接失败？
-A: 检查 MySQL 服务是否运行，确认 .env 配置正确。系统支持无数据库模式。
+### Q: Docker容器无法创建？
+A: 检查Docker服务是否启动，确认有足够的磁盘空间。
 
----
+### Q: 数据库连接错误？
+A: 确认SQLite文件路径正确，检查是否有足够的文件系统权限。
 
-## 快速测试（无需Python后端）
+### Q: 端口被占用？
+A: 修改后端端口（在run.py中）或前端端口（在vite.config.js中）。
 
-前端已启动，可以直接访问 http://localhost:3000 查看界面。
-登录页面使用模拟数据，可以体验前端功能。
+## 系统配置
 
----
+### 性能调优
+- 增加Docker的内存分配（推荐至少2GB）
+- 调整Python的垃圾回收参数
+- 优化数据库连接池大小
+
+### 安全配置
+- 修改默认账户密码
+- 配置HTTPS（生产环境）
+- 设置适当的防火墙规则
+
+## 卸载
+
+### 1. 停止服务
+```bash
+# 停止前端 (Ctrl+C)
+# 停止后端 (Ctrl+C)
+```
+
+### 2. 清理Docker容器
+```bash
+# 停止所有容器
+docker stop $(docker ps -aq)
+# 删除所有容器
+docker rm $(docker ps -aq)
+```
+
+### 3. 删除项目
+```bash
+rm -rf cyber-range
+```
 
 ## 技术支持
-
-如有问题，请查看：
-- README.md - 项目说明
-- QUICKSTART.md - 快速启动指南
+如遇到安装问题，请检查系统要求是否满足，确认所有依赖已正确安装。如有其他问题，请联系技术支持。

@@ -1,13 +1,8 @@
-"""
-AI Agent模块
-包含环境管理、攻击模拟、防御模拟三个智能Agent
-"""
-from .env_agent import get_env_agent, EnvironmentAgent
-from .attack_agent import get_attack_agent, AttackAgent
-from .defense_agent import get_defense_agent, DefenseAgent
+# AI Agents package initialization
 
-__all__ = [
-    'get_env_agent', 'EnvironmentAgent',
-    'get_attack_agent', 'AttackAgent',
-    'get_defense_agent', 'DefenseAgent'
-]
+from .env_manager_agent import EnvManagerAgent
+from .attack_agent import AttackAgent
+from .defense_agent import DefenseAgent
+
+
+__all__ = ['EnvManagerAgent', 'AttackAgent', 'DefenseAgent']
