@@ -25,16 +25,16 @@ compat_bp = Blueprint('compat', __name__, url_prefix='/api')
 # ==================== 环境管理兼容路由 /api/env/... ====================
 
 @compat_bp.route('/env/list', methods=['GET'])
-@jwt_required()
+# @jwt_required()  # 已移除令牌认证要求
 def compat_env_list():
     """获取环境列表（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1  # 默认用户ID，无需令牌认证
         targets = Target.list_all()
         
         return jsonify({
             'status': 'success',
-            'data': [t.to_dict() for t in targets]
+            'containers': [t.to_dict() for t in targets]
         }), 200
     except Exception as e:
         current_app.logger.error(f"获取环境列表失败: {e}")
@@ -42,49 +42,34 @@ def compat_env_list():
 
 
 @compat_bp.route('/env/create', methods=['POST'])
-@jwt_required()
+# @jwt_required()  # 已移除令牌认证要求
 def compat_env_create():
     """创建环境（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1  # 默认用户ID，无需令牌认证
         data = request.get_json()
         
-        target = Target.create(
-            name=data.get('name', '未命名环境'),
-            description=data.get('description', ''),
-            env_type=data.get('type', 'web'),
-            config=data.get('config', {}),
-            user_id=user_id
-        )
+        # 兼容新旧接口，调用真实靶场创建逻辑
+        image = data.get('image', 'nginx')
+        port = data.get('port', '8080:80')
         
-        if not target:
-            return jsonify({'status': 'error', 'msg': '创建环境失败'}), 500
-        
-        # 记录日志
-        Log.create('info', 'target', f'创建环境: {target.name}', user_id=user_id)
-        
-        return jsonify({
-            'status': 'success',
-            'data': target.to_dict()
-        }), 201
+        # 转发到真实的靶场创建逻辑
+        from routes.targets import create_target
+        return create_target()
     except Exception as e:
         current_app.logger.error(f"创建环境失败: {e}")
         return jsonify({'status': 'error', 'msg': '创建环境失败'}), 500
 
 
 @compat_bp.route('/env/<target_id>', methods=['GET'])
-@jwt_required()
 def compat_env_get(target_id):
     """获取环境详情（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         target = Target.get_by_id(target_id)
         
         if not target:
             return jsonify({'status': 'error', 'msg': '环境不存在'}), 404
-        
-        if target.user_id and target.user_id != user_id:
-            return jsonify({'status': 'error', 'msg': '权限不足'}), 403
         
         return jsonify({
             'status': 'success',
@@ -96,19 +81,15 @@ def compat_env_get(target_id):
 
 
 @compat_bp.route('/env/<target_id>', methods=['PUT'])
-@jwt_required()
 def compat_env_update(target_id):
     """更新环境（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         data = request.get_json()
         target = Target.get_by_id(target_id)
         
         if not target:
             return jsonify({'status': 'error', 'msg': '环境不存在'}), 404
-        
-        if target.user_id and target.user_id != user_id:
-            return jsonify({'status': 'error', 'msg': '权限不足'}), 403
         
         success = target.update(
             name=data.get('name'),
@@ -134,18 +115,14 @@ def compat_env_update(target_id):
 
 
 @compat_bp.route('/env/delete/<target_id>', methods=['POST'])
-@jwt_required()
 def compat_env_delete(target_id):
     """删除环境（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         target = Target.get_by_id(target_id)
         
         if not target:
             return jsonify({'status': 'error', 'msg': '环境不存在'}), 404
-        
-        if target.user_id and target.user_id != user_id:
-            return jsonify({'status': 'error', 'msg': '权限不足'}), 403
         
         success = target.delete()
         
@@ -165,18 +142,14 @@ def compat_env_delete(target_id):
 
 
 @compat_bp.route('/env/start/<target_id>', methods=['POST'])
-@jwt_required()
 def compat_env_start(target_id):
     """启动环境（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         target = Target.get_by_id(target_id)
         
         if not target:
             return jsonify({'status': 'error', 'msg': '环境不存在'}), 404
-        
-        if target.user_id and target.user_id != user_id:
-            return jsonify({'status': 'error', 'msg': '权限不足'}), 403
         
         success = target.update(status='running')
         
@@ -196,18 +169,14 @@ def compat_env_start(target_id):
 
 
 @compat_bp.route('/env/stop/<target_id>', methods=['POST'])
-@jwt_required()
 def compat_env_stop(target_id):
     """停止环境（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         target = Target.get_by_id(target_id)
         
         if not target:
             return jsonify({'status': 'error', 'msg': '环境不存在'}), 404
-        
-        if target.user_id and target.user_id != user_id:
-            return jsonify({'status': 'error', 'msg': '权限不足'}), 403
         
         success = target.update(status='stopped')
         
@@ -227,11 +196,10 @@ def compat_env_stop(target_id):
 
 
 @compat_bp.route('/env/stats', methods=['GET'])
-@jwt_required()
 def compat_env_stats():
     """获取环境统计（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         targets = Target.list_all()
         
         stats = {
@@ -253,11 +221,10 @@ def compat_env_stats():
 # ==================== 攻击管理兼容路由 /api/attack/... ====================
 
 @compat_bp.route('/attack/list', methods=['GET'])
-@jwt_required()
 def compat_attack_list():
     """获取攻击列表（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         attacks = Attack.list_all()
         
         return jsonify({
@@ -270,11 +237,10 @@ def compat_attack_list():
 
 
 @compat_bp.route('/attack/create', methods=['POST'])
-@jwt_required()
 def compat_attack_create():
     """创建攻击（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         data = request.get_json()
         
         attack = Attack.create(
@@ -315,11 +281,10 @@ def compat_attack_types():
 
 
 @compat_bp.route('/attack/stats', methods=['GET'])
-@jwt_required()
 def compat_attack_stats():
     """获取攻击统计（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         stats = Attack.get_stats()
         return jsonify({
             'status': 'success',
@@ -333,11 +298,10 @@ def compat_attack_stats():
 # ==================== 防御管理兼容路由 /api/defense/... ====================
 
 @compat_bp.route('/defense/list', methods=['GET'])
-@jwt_required()
 def compat_defense_list():
     """获取防御列表（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         defenses = Defense.list_all()
         
         return jsonify({
@@ -350,7 +314,6 @@ def compat_defense_list():
 
 
 @compat_bp.route('/defense/types', methods=['GET'])
-@jwt_required()
 def compat_defense_types():
     """获取防御类型（兼容前端）"""
     try:
@@ -365,11 +328,10 @@ def compat_defense_types():
 
 
 @compat_bp.route('/defense/stats', methods=['GET'])
-@jwt_required()
 def compat_defense_stats():
     """获取防御统计（兼容前端）"""
     try:
-        user_id = get_jwt_identity()
+        user_id = 1
         stats = Defense.get_stats()
         return jsonify({
             'status': 'success',

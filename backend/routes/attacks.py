@@ -201,7 +201,7 @@ def create_attack():
         
         # 记录日志
         Log.create('info', 'attack', f'创建攻击任务: {name} ({attack_type})', 
-                   user_id=user_id, target_id=attack.target_id)
+                   user_id=user_id, target=attack.target)
         
         return jsonify({
             'status': 'success',

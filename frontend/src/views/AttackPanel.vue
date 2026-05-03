@@ -3,7 +3,9 @@ o<template>
     <!-- 页面头部 -->
     <div class="page-header">
       <h2 class="page-title">
-        <el-icon><Aim /></el-icon>
+        <el-icon>
+          <Aim />
+        </el-icon>
         攻击模拟面板
       </h2>
       <p class="page-desc">配置并执行各类安全攻击场景，支持多种攻击类型和自定义参数</p>
@@ -32,20 +34,20 @@ o<template>
         <el-card shadow="hover" class="tech-card" style="margin-bottom: 16px;">
           <template #header>
             <div class="card-header">
-              <span class="card-title"><el-icon><MagicStick /></el-icon> 快速模板</span>
+              <span class="card-title"><el-icon>
+                  <MagicStick />
+                </el-icon> 快速模板</span>
               <el-button text type="primary" @click="showTemplates = !showTemplates">
                 {{ showTemplates ? '收起' : '展开' }}
               </el-button>
             </div>
           </template>
           <div v-show="showTemplates" class="template-grid">
-            <div 
-              v-for="template in templates" 
-              :key="template.name"
-              class="template-item"
-              @click="applyTemplate(template)"
-            >
-              <el-icon class="template-icon"><Position /></el-icon>
+            <div v-for="template in templates" :key="template.name" class="template-item"
+              @click="applyTemplate(template)">
+              <el-icon class="template-icon">
+                <Position />
+              </el-icon>
               <span class="template-name">{{ template.name }}</span>
               <span class="template-count">{{ template.attacks?.length || 0 }} 个攻击</span>
             </div>
@@ -56,18 +58,22 @@ o<template>
         <el-card shadow="hover" class="tech-card" style="margin-bottom: 16px;">
           <template #header>
             <div class="card-header">
-              <span class="card-title"><el-icon><Setting /></el-icon> 攻击配置</span>
+              <span class="card-title"><el-icon>
+                  <Setting />
+                </el-icon> 攻击配置</span>
               <el-tag v-if="form.type" :type="getAttackTypeTag(form.type)" size="small">
                 {{ form.type }}
               </el-tag>
             </div>
           </template>
-          
+
           <el-form :model="form" label-width="100px" size="default" class="attack-form">
             <el-form-item label="攻击名称">
               <el-input v-model="form.name" placeholder="给攻击起个名字（可选）" clearable>
                 <template #prefix>
-                  <el-icon><Edit /></el-icon>
+                  <el-icon>
+                    <Edit />
+                  </el-icon>
                 </template>
               </el-input>
             </el-form-item>
@@ -81,7 +87,9 @@ o<template>
                 <el-form-item label="目标地址" required>
                   <el-input v-model="form.target" placeholder="192.168.1.100 或 localhost">
                     <template #prefix>
-                      <el-icon><Location /></el-icon>
+                      <el-icon>
+                        <Location />
+                      </el-icon>
                     </template>
                     <template #append>
                       <el-button @click="selectTarget" :icon="Monitor">选择靶场</el-button>
@@ -93,7 +101,9 @@ o<template>
                 <el-form-item label="端口">
                   <el-input v-model="form.port" placeholder="8080">
                     <template #prefix>
-                      <el-icon><Connection /></el-icon>
+                      <el-icon>
+                        <Connection />
+                      </el-icon>
                     </template>
                   </el-input>
                 </el-form-item>
@@ -101,26 +111,14 @@ o<template>
             </el-row>
 
             <el-form-item label="攻击参数">
-              <el-input 
-                v-model="form.params" 
-                type="textarea" 
-                :rows="4" 
-                placeholder="输入JSON格式的攻击参数"
-                class="code-textarea"
-              />
+              <el-input v-model="form.params" type="textarea" :rows="4" placeholder="输入JSON格式的攻击参数"
+                class="code-textarea" />
             </el-form-item>
 
             <el-form-item label="攻击强度">
               <div class="intensity-wrapper">
-                <el-slider 
-                  v-model="form.intensity" 
-                  :min="1" 
-                  :max="10" 
-                  :marks="intensityMarks"
-                  :format-tooltip="formatIntensity"
-                  show-stops
-                  class="intensity-slider"
-                />
+                <el-slider v-model="form.intensity" :min="1" :max="10" :marks="intensityMarks"
+                  :format-tooltip="formatIntensity" show-stops class="intensity-slider" />
               </div>
               <div class="intensity-footer">
                 <el-tag :type="getIntensityType(form.intensity)" size="small" class="intensity-tag">
@@ -134,20 +132,29 @@ o<template>
           <div class="form-actions-wrapper">
             <p class="form-actions-tip">配置完成后点击下方按钮执行攻击操作</p>
             <div class="form-actions">
-              <el-button type="danger" size="default" :loading="loading" @click="launch" :disabled="!form.type || !form.target">
-                <el-icon><Aim /></el-icon>
+              <el-button type="danger" size="default" :loading="loading" @click="launch"
+                :disabled="!form.type || !form.target">
+                <el-icon>
+                  <Aim />
+                </el-icon>
                 发起攻击
               </el-button>
               <el-button size="default" @click="saveAsTemplate" :disabled="!form.type">
-                <el-icon><FolderAdd /></el-icon>
+                <el-icon>
+                  <FolderAdd />
+                </el-icon>
                 保存为模板
               </el-button>
               <el-button size="default" @click="resetForm">
-                <el-icon><Refresh /></el-icon>
+                <el-icon>
+                  <Refresh />
+                </el-icon>
                 重置配置
               </el-button>
               <el-button type="success" @click="aiPlanAttack" :disabled="!form.target">
-                <el-icon><MagicStick /></el-icon>
+                <el-icon>
+                  <MagicStick />
+                </el-icon>
                 AI智能规划攻击
               </el-button>
             </div>
@@ -158,7 +165,9 @@ o<template>
         <el-card shadow="hover" class="tech-card defense-card" style="margin-bottom: 16px;">
           <template #header>
             <div class="card-header">
-              <span class="card-title"><el-icon><Umbrella /></el-icon> 防御状态概览</span>
+              <span class="card-title"><el-icon>
+                  <Umbrella />
+                </el-icon> 防御状态概览</span>
               <el-button text type="primary" size="small" @click="goToDefense">
                 详细配置
               </el-button>
@@ -188,7 +197,9 @@ o<template>
             <div class="defense-actions">
               <p class="defense-tip">建议在执行攻击前先配置防御规则</p>
               <el-button type="success" size="default" @click="goToDefense">
-                <el-icon><Umbrella /></el-icon>
+                <el-icon>
+                  <Umbrella />
+                </el-icon>
                 配置防御策略
               </el-button>
             </div>
@@ -200,17 +211,23 @@ o<template>
           <template #header>
             <div class="card-header">
               <span class="card-title">
-                <el-icon><Document /></el-icon>
+                <el-icon>
+                  <Document />
+                </el-icon>
                 攻击结果
               </span>
               <div class="result-actions">
                 <el-tag :type="resultType" size="small">{{ resultStatus }}</el-tag>
                 <el-button text size="small" @click="copyResult">
-                  <el-icon><CopyDocument /></el-icon>
+                  <el-icon>
+                    <CopyDocument />
+                  </el-icon>
                   复制
                 </el-button>
                 <el-button text size="small" @click="result = ''">
-                  <el-icon><Close /></el-icon>
+                  <el-icon>
+                    <Close />
+                  </el-icon>
                   关闭
                 </el-button>
               </div>
@@ -224,12 +241,7 @@ o<template>
 
       <!-- 右侧：攻击记录和队列 -->
       <el-col :xs="24" :lg="10">
-        <AttackQueue 
-          :queue="attackQueue" 
-          @clear="clearQueue" 
-          @remove="removeFromQueue"
-          style="margin-bottom: 16px;"
-        />
+        <AttackQueue :queue="attackQueue" @clear="clearQueue" @remove="removeFromQueue" style="margin-bottom: 16px;" />
         <AttackTimeline :logs="attackLogs" @refresh="loadAttackHistory" />
       </el-col>
     </el-row>
@@ -262,7 +274,7 @@ o<template>
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { 
+import {
   Aim, Setting, Edit, Location, Connection,
   MagicStick, Position, List, SuccessFilled, Loading,
   FolderAdd, Refresh, CopyDocument, Close, Monitor, Umbrella, Document
@@ -334,7 +346,7 @@ async function launch() {
 
   loading.value = true
   result.value = ''
-  
+
   try {
     const createRes = await axios.post('/api/attack/create', {
       name: form.value.name || form.value.type,
@@ -347,7 +359,7 @@ async function launch() {
     if (createRes.data.status === 'success') {
       const attackId = createRes.data.attack?.attack_id || Date.now()
       const execRes = await axios.post(`/api/attack/execute/${attackId}`)
-      
+
       if (execRes.data.status === 'success') {
         result.value = JSON.stringify({ status: 'success', attack_id: attackId, result: '攻击测试完成', vulnerabilities_found: 2 }, null, 2)
         resultType.value = 'success'
@@ -380,10 +392,10 @@ async function aiPlanAttack() {
 
   loading.value = true
   result.value = ''
-  
+
   try {
     // 调用AI接口进行攻击规划
-    const aiRes = await axios.post('/api/ai/plan-attack', {
+    const aiRes = await axios.post('/api/agents/attack/plan', {
       target: form.value.target,
       port: form.value.port,
       description: `对目标${form.value.target}:${form.value.port}进行安全测试，请规划合适的攻击策略`
@@ -400,7 +412,7 @@ async function aiPlanAttack() {
       if (plan.recommended_attack) {
         form.value.type = plan.recommended_attack
       }
-      
+
       // 应用AI推荐的强度
       if (plan.recommended_intensity) {
         form.value.intensity = plan.recommended_intensity
@@ -540,7 +552,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.stats-row { margin-bottom: 16px; }
+.stats-row {
+  margin-bottom: 16px;
+}
 
 .card-header {
   display: flex;
@@ -580,22 +594,41 @@ onMounted(() => {
   border-color: var(--purple);
 }
 
-.template-icon { font-size: 24px; color: var(--cyan); margin-bottom: 8px; }
-.template-name { font-size: 14px; color: var(--text-primary); font-family: var(--font-ui) !important; }
-.template-count { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.template-icon {
+  font-size: 24px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
 
-.attack-form { padding: 8px 0; }
-.code-textarea { font-family: var(--font-mono); }
+.template-name {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-family: var(--font-ui) !important;
+}
 
-.intensity-wrapper { 
-  display: flex; 
-  align-items: center; 
+.template-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.attack-form {
+  padding: 8px 0;
+}
+
+.code-textarea {
+  font-family: var(--font-mono);
+}
+
+.intensity-wrapper {
+  display: flex;
+  align-items: center;
   width: 100%;
   padding: 8px 0;
 }
 
-.intensity-slider { 
-  flex: 1; 
+.intensity-slider {
+  flex: 1;
 }
 
 .intensity-footer {
@@ -604,9 +637,9 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-.intensity-tag { 
-  min-width: 100px; 
-  text-align: center; 
+.intensity-tag {
+  min-width: 100px;
+  text-align: center;
   padding: 4px 12px;
 }
 
@@ -617,16 +650,57 @@ onMounted(() => {
   margin-top: 16px;
 }
 
-.form-actions-tip { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; text-align: center; }
-.form-actions { display: flex; gap: 12px; justify-content: center; }
+.form-actions-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  text-align: center;
+}
 
-.defense-summary { padding: 8px; }
-.defense-stat-row { display: flex; gap: 16px; margin-bottom: 16px; }
-.defense-stat-item { display: flex; flex-direction: column; gap: 4px; }
-.defense-stat-label { font-size: 12px; color: var(--text-muted); font-family: var(--font-display) !important; }
-.defense-stat-value { font-size: 18px; font-weight: 600; color: var(--text-primary); font-family: var(--font-display) !important; }
-.defense-tip { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
-.defense-actions { text-align: center; }
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.defense-summary {
+  padding: 8px;
+}
+
+.defense-stat-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.defense-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.defense-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-display) !important;
+}
+
+.defense-stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-display) !important;
+}
+
+.defense-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.defense-actions {
+  text-align: center;
+}
 
 .result-content {
   background: rgba(0, 0, 0, 0.2);
@@ -641,7 +715,12 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .defense-stat-row { flex-wrap: wrap; }
-  .form-actions { flex-wrap: wrap; }
+  .defense-stat-row {
+    flex-wrap: wrap;
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
+  }
 }
 </style>

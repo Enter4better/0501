@@ -1,7 +1,9 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h2 class="page-title"><el-icon><Setting /></el-icon> 靶场环境管理</h2>
+      <h2 class="page-title"><el-icon>
+          <Setting />
+        </el-icon> 靶场环境管理</h2>
       <p class="page-desc">
         Docker容器管理 | 运行中 {{ stats.running }} 个 | 总计 {{ stats.total }} 个
       </p>
@@ -13,7 +15,9 @@
         <el-card shadow="hover" class="stat-card stat-success">
           <el-statistic title="运行中靶场" :value="stats.running">
             <template #prefix>
-              <el-icon style="color: #00e676; font-size: 18px;"><CircleCheck /></el-icon>
+              <el-icon style="color: #00e676; font-size: 18px;">
+                <CircleCheck />
+              </el-icon>
             </template>
           </el-statistic>
         </el-card>
@@ -22,7 +26,9 @@
         <el-card shadow="hover" class="stat-card stat-warning">
           <el-statistic title="已停止靶场" :value="stats.stopped">
             <template #prefix>
-              <el-icon style="color: #ffd740; font-size: 18px;"><Warning /></el-icon>
+              <el-icon style="color: #ffd740; font-size: 18px;">
+                <Warning />
+              </el-icon>
             </template>
           </el-statistic>
         </el-card>
@@ -31,7 +37,9 @@
         <el-card shadow="hover" class="stat-card stat-info">
           <el-statistic title="总靶场数" :value="stats.total">
             <template #prefix>
-              <el-icon style="color: #00e5ff; font-size: 18px;"><DataLine /></el-icon>
+              <el-icon style="color: #00e5ff; font-size: 18px;">
+                <DataLine />
+              </el-icon>
             </template>
           </el-statistic>
         </el-card>
@@ -42,13 +50,19 @@
     <el-card shadow="hover" class="tech-card" style="margin-bottom: 14px;">
       <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <el-button type="primary" @click="showCreateModal = true">
-          <el-icon><Plus /></el-icon> 创建靶场
+          <el-icon>
+            <Plus />
+          </el-icon> 创建靶场
         </el-button>
         <el-button @click="refreshTargets" :loading="loading">
-          <el-icon><Refresh /></el-icon> 刷新列表
+          <el-icon>
+            <Refresh />
+          </el-icon> 刷新列表
         </el-button>
         <el-button type="danger" @click="cleanAllTargets" :disabled="targets.length === 0">
-          <el-icon><Delete /></el-icon> 清理全部
+          <el-icon>
+            <Delete />
+          </el-icon> 清理全部
         </el-button>
       </div>
     </el-card>
@@ -57,20 +71,26 @@
     <el-card shadow="hover" class="tech-card">
       <template #header>
         <div class="card-title">
-          <el-icon><Monitor /></el-icon> 靶场列表
+          <el-icon>
+            <Monitor />
+          </el-icon> 靶场列表
           <el-tag size="small" style="margin-left: 8px;">{{ targets.length }} 个</el-tag>
         </div>
       </template>
 
       <!-- 加载状态 -->
       <div v-if="loading" style="text-align: center; padding: 40px;">
-        <el-icon :size="32" style="color: var(--cyan); animation: spin 1.5s linear infinite;"><Loading /></el-icon>
+        <el-icon :size="32" style="color: var(--cyan); animation: spin 1.5s linear infinite;">
+          <Loading />
+        </el-icon>
         <p style="color: var(--text-muted); margin-top: 8px; font-size: 12px;">正在加载靶场数据...</p>
       </div>
 
       <!-- 空状态 -->
       <div v-else-if="targets.length === 0" style="text-align: center; padding: 40px; color: var(--text-muted);">
-        <el-icon :size="48"><Box /></el-icon>
+        <el-icon :size="48">
+          <Box />
+        </el-icon>
         <p style="margin-top: 12px;">暂无靶场环境</p>
         <p style="font-size: 12px; margin-top: 4px;">点击"创建靶场"按钮开始创建</p>
       </div>
@@ -89,7 +109,8 @@
         </el-table-column>
         <el-table-column prop="ports" label="端口映射" min-width="100">
           <template #default="{ row }">
-            <span style="color: var(--purple); font-family: var(--font-mono);">{{ row.ports || row.port_mapping || '-' }}</span>
+            <span style="color: var(--purple); font-family: var(--font-mono);">{{ row.ports || row.port_mapping || '-'
+              }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
@@ -157,12 +178,6 @@
           </el-input>
           <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">格式: 主机端口:容器端口</div>
         </el-form-item>
-        <el-form-item label="靶场名称">
-          <el-input v-model="createForm.name" placeholder="自动生成名称" />
-        </el-form-item>
-        <el-form-item label="环境变量">
-          <el-input v-model="createForm.env" placeholder="KEY=value,KEY2=value2" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showCreateModal = false">取消</el-button>
@@ -187,9 +202,7 @@ const stats = reactive({ running: 0, stopped: 0, total: 0 })
 
 const createForm = reactive({
   image: '',
-  port: '8080:80',
-  name: '',
-  env: ''
+  port: '8080:80'
 })
 
 let refreshInterval = null
@@ -236,8 +249,6 @@ async function createTarget() {
       showCreateModal.value = false
       createForm.image = ''
       createForm.port = '8080:80'
-      createForm.name = ''
-      createForm.env = ''
       await fetchTargets()
     } else {
       ElMessage.error(res.data.msg || '创建失败')
@@ -291,7 +302,7 @@ async function deleteTarget(target) {
     await ElMessageBox.confirm(`确定要删除靶场 "${target.name}" 吗？`, '确认删除', {
       type: 'warning'
     })
-    
+
     const id = target.id || target.target_id || target.name
     const res = await axios.post(`/api/env/delete/${id}`)
     if (res.data.status === 'success') {
@@ -313,7 +324,7 @@ async function cleanAllTargets() {
     await ElMessageBox.confirm('确定要清理所有靶场吗？此操作不可恢复！', '确认清理', {
       type: 'warning'
     })
-    
+
     const res = await axios.post('/api/env/clean')
     if (res.data.status === 'success') {
       ElMessage.success(`已清理 ${res.data.cleaned} 个靶场`)
@@ -393,6 +404,8 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
